@@ -1,0 +1,36 @@
+@use '@/app/global-mixins.module.scss' as globalMixins;
+
+.customerBackgroundPink {
+  @include globalMixins.styleBackground(#d6a0a0, 200px);
+}
+
+.customerBackgroundBlue {
+  @include globalMixins.styleBackground(#a0b9d6, 200px);
+}
+
+.customerBackground {
+  text-align: center;
+  vertical-align: middle;
+  height: 30px;
+  border-radius: 4px;
+
+  p {
+    width: 100%;
+    height: 100%;
+    padding: 3px 0;
+    color: #fffffb;
+  }
+
+  button {
+    border: 1px solid #333;
+    color: #444;
+    padding: 3px 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: #888;
+      color: #fffffb;
+    }
+  }
+}

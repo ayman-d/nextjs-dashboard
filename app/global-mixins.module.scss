@@ -1,0 +1,4 @@
+@mixin styleBackground($color, $width) {
+  background-color: $color;
+  width: $width;
+}
