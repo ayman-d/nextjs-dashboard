@@ -20,6 +20,8 @@ export default function CustomerHeader() {
       <p>Customers Page</p>
 
       <button onClick={changeBg}>Change BG</button>
+
+      <hr className={styles.mainHr} />
     </div>
   );
 }
