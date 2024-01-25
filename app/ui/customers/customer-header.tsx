@@ -3,6 +3,7 @@
 import styles from './customer-header.module.scss';
 import clsx from 'clsx';
 import { useState } from 'react';
+import { Button } from '@ayman-d/npm-lib-test';
 
 export default function CustomerHeader() {
   const [isPink, setIsPink] = useState(false);
@@ -22,6 +23,8 @@ export default function CustomerHeader() {
       <button onClick={changeBg}>Change BG</button>
 
       <hr className={styles.mainHr} />
+
+      <Button label="New Button" />
     </div>
   );
 }
