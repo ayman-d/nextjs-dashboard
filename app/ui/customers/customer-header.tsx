@@ -3,7 +3,7 @@
 import styles from './customer-header.module.scss';
 import clsx from 'clsx';
 import { useState } from 'react';
-import { Button } from '@ayman-d/npm-lib-test';
+import { Button } from 'profire-react-lib';
 
 export default function CustomerHeader() {
   const [isPink, setIsPink] = useState(false);

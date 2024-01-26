@@ -10,7 +10,6 @@
     "start": "next start"
   },
   "dependencies": {
-    "@ayman-d/npm-lib-test": "^0.0.4",
     "@heroicons/react": "^2.0.18",
     "@tailwindcss/forms": "^0.5.7",
     "@types/node": "20.5.7",
@@ -21,6 +20,7 @@
     "next": "^14.1.0",
     "next-auth": "^5.0.0-beta.5",
     "postcss": "8.4.31",
+    "profire-react-lib": "bitbucket:profireenergy/pf-react-lib",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwindcss": "3.3.3",
