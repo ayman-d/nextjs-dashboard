@@ -3,7 +3,7 @@
 import styles from './customer-header.module.scss';
 import clsx from 'clsx';
 import { useState } from 'react';
-import { Button } from 'profire-react-lib';
+import { Button, NavBar, RedButton } from 'profire-react-lib';
 
 export default function CustomerHeader() {
   const [isPink, setIsPink] = useState(false);
@@ -25,6 +25,8 @@ export default function CustomerHeader() {
       <hr className={styles.mainHr} />
 
       <Button label="New Button" />
+      <RedButton label="Red Button" />
+      <NavBar />
     </div>
   );
 }
