@@ -7,6 +7,11 @@ import { redirect } from 'next/navigation';
 import { signIn } from '@/auth';
 import { AuthError } from 'next-auth';
 
+import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+import type { Database } from '@/database.types';
+
 // create a zod schema to represent the form data
 const FormSchema = z.object({
   id: z.string(),
@@ -36,6 +41,12 @@ export type State = {
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
+/**
+ * @brief Function to create a new invoice
+ * @param prevState previous state of the form (not used here, but required by the action)
+ * @param formData the form data submitted by the form
+ * @returns null
+ */
 export async function createInvoice(prevState: State, formData: FormData) {
   // validate the provided form data
   // safeParse returns success or error
@@ -158,4 +169,82 @@ export async function authenticate(
     }
     throw error;
   }
+}
+
+const IdentityFormSchema = z.object({
+  email: z
+    .string({
+      invalid_type_error: 'Please enter an email.',
+    })
+    .min(1, { message: 'Email is required.' })
+    .email('Please enter a valid email.'),
+  password: z
+    .string({
+      invalid_type_error: 'Please enter a password.',
+    })
+    .min(1, { message: 'Password is required.' }),
+});
+
+export type IdentityState = {
+  errors?: {
+    email?: string[];
+    password?: string[];
+  };
+  message?: string | null;
+};
+
+// function that logs user in using supabase
+export async function loginAction(
+  prevState: IdentityState,
+  formData: FormData,
+) {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  const validatedFields = IdentityFormSchema.safeParse({
+    email: formData.get('email'),
+    password: formData.get('password'),
+  });
+
+  // if form validation fails, return errors early. Otherwise, continue
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Incompleted Submission. Failed to login.',
+    };
+  }
+
+  const { email, password } = validatedFields.data;
+
+  try {
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    // redirect the user to the main page after they login
+    redirect('/dashboard');
+  } catch (error) {
+    return {
+      message: 'Invalid credentials. Failed to login.',
+    };
+  }
+}
+
+// function that logs user out using supabase
+export async function logoutAction() {
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    throw error;
+  }
+
+  // redirect the user to the main page after they logout
+  redirect('/');
 }

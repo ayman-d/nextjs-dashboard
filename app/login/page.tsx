@@ -1,12 +1,22 @@
-export default function Login() {
+import LoginForm from '../ui/login-form-new';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+
+export default async function Login() {
+  const supabase = createServerComponentClient({ cookies });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect('/dashboard');
+  }
+
   return (
-    <form action="/auth/login" method="post">
-      <label htmlFor="email">Email</label>
-      <input name="email" />
-      <label htmlFor="password">Password</label>
-      <input type="password" name="password" />
-      <button>Sign In</button>
-      <button formAction="/auth/sign-up">Sign Up</button>
-    </form>
+    <div>
+      <LoginForm />
+    </div>
   );
 }
