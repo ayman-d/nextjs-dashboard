@@ -2,11 +2,11 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import Image from 'next/image';
 import { lusitana } from '@/app/ui/fonts';
-import { LatestInvoice } from '@/app/lib/definitions';
-import { fetchLatestInvoices } from '@/app/lib/data';
+import { getLatestInvoices } from '@/app/lib/actions';
+getLatestInvoices;
 
 export default async function LatestInvoices() {
-  const latestInvoices = await fetchLatestInvoices();
+  const latestInvoices = await getLatestInvoices();
 
   return (
     <div className="flex w-full flex-col md:col-span-4">
@@ -17,7 +17,7 @@ export default async function LatestInvoices() {
         {/* NOTE: comment in this code when you get to this point in the course */}
 
         <div className="bg-white px-6">
-          {latestInvoices.map((invoice, i) => {
+          {latestInvoices!.map((invoice, i) => {
             return (
               <div
                 key={invoice.id}
