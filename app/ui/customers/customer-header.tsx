@@ -4,6 +4,7 @@ import styles from './customer-header.module.scss';
 import clsx from 'clsx';
 import { useState } from 'react';
 import { Button, NavBar, RedButton } from 'profire-react-lib';
+import { fetchInvoicesPages } from '@/app/lib/actions/invoiceActions';
 
 export default function CustomerHeader() {
   const [isPink, setIsPink] = useState(false);
@@ -27,6 +28,7 @@ export default function CustomerHeader() {
       <Button label="New Button" />
       <RedButton label="Red Button" />
       <NavBar />
+      <button onClick={() => fetchInvoicesPages('del')}>JD</button>
     </div>
   );
 }

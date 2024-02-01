@@ -5,11 +5,11 @@ import { z } from 'zod';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-
+import { unstable_noStore as noStore } from 'next/cache';
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import type { Database } from '@/database.types';
-import { LatestInvoice, Revenue } from '@/app/lib/definitions';
+import { InvoicesTable, LatestInvoice, Revenue } from '@/app/lib/definitions';
 import { formatCurrency } from '@/app/lib/utils';
 
 // invoice schema object used by zod to represent the invoice form
@@ -41,9 +41,12 @@ export type State = {
 const CreateInvoiceSchema = InvoiceFormSchema.omit({ id: true, date: true });
 const UpdateInvoiceSchema = InvoiceFormSchema.omit({ id: true, date: true });
 
+// number of items per page when fetching invoices
+const ITEMS_PER_PAGE = 6;
+
 /**
  * @brief function to create a new invoice
- * @param prevState previous state of the form (not used here, but required by the action)
+ * @param prevState status state passed to the useFormState hook
  * @param formData the form data submitted by the form
  * @returns state of the request which is used by the useFormState function
  */
@@ -55,7 +58,6 @@ export async function createInvoice(prevState: State, formData: FormData) {
   });
 
   // validate the provided form data
-  // safeParse returns success or error
   const validatedFields = CreateInvoiceSchema.safeParse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
@@ -105,12 +107,24 @@ export async function createInvoice(prevState: State, formData: FormData) {
   redirect('/dashboard/invoices');
 }
 
-// TODO: ported but not refactored. revisit
+/**
+ *
+ * @param id id of invoice to be updated
+ * @param prevState status state passed to the useFormState hook
+ * @param formData the form data submitted by the form
+ * @returns state of the request which is used by the useFormState function
+ */
 export async function updateInvoice(
   id: string,
   prevState: State,
   formData: FormData,
 ) {
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
   // validate the provided form data
   const validatedFields = UpdateInvoiceSchema.safeParse({
     customerId: formData.get('customerId'),
@@ -132,16 +146,24 @@ export async function updateInvoice(
   // store the monetary amount in cents (avoid floats)
   const amountInCents = amount * 100;
 
-  // write sql command
   try {
-    await sql`
-      UPDATE invoices
-      SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-      WHERE id = ${id}
-    `;
+    // attempt to update the invoice on supabase
+    const { error } = await supabase
+      .from('invoices')
+      .update({
+        customer_id: customerId,
+        amount: amountInCents,
+        status,
+      })
+      .eq('id', id);
+
+    if (error) {
+      throw error;
+    }
   } catch (error) {
+    // otherwise update the error messsage
     return {
-      message: `Database Error: Failed to update invoice ${id}`,
+      message: `Database Error: Failed to update invoice`,
     };
   }
 
@@ -165,4 +187,76 @@ export async function deleteInvoice(id: string) {
   }
 
   revalidatePath('/dashboard/invoices');
+}
+
+/**
+ * @brief function that returns the latest 5 invoices from the database
+ * @returns latest invoice data: Invoice[] | undefined
+ */
+export async function getLatestInvoices(): Promise<
+  LatestInvoice[] | undefined
+> {
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  try {
+    // attempt to get the latest 5 invoices from the database
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('amount, customers (name, image_url, email), id')
+      .order('date', { ascending: false })
+      .limit(5);
+    if (error) {
+      console.log(error);
+
+      throw error;
+    }
+
+    const latestInvoices: LatestInvoice[] = data.map((invoice) => ({
+      id: invoice.id,
+      name: invoice.customers!.name,
+      image_url: invoice.customers!.image_url!,
+      email: invoice.customers!.email,
+      amount: formatCurrency(invoice.amount),
+    }));
+
+    return latestInvoices;
+  } catch (error) {
+    // otherwise log the error
+    console.log(error);
+  }
+}
+
+// FIXME: I cannot get this to work with supabase.
+// Needs more investigation. It might be good to return  all invoices and filter them in the client onChange
+
+/**
+ * function that returns the number of pages of invoices after filtering based on the query param
+ * @param query search query text
+ * @returns pages of invoice data after filtering based on the query param
+ */
+export async function fetchInvoicesPages(query: string) {
+  noStore();
+
+  try {
+    const count = await sql`SELECT COUNT(*)
+    FROM invoices
+    JOIN customers ON invoices.customer_id = customers.id
+    WHERE
+      customers.name ILIKE ${`%${query}%`} OR
+      customers.email ILIKE ${`%${query}%`} OR
+      invoices.amount::text ILIKE ${`%${query}%`} OR
+      invoices.date::text ILIKE ${`%${query}%`} OR
+      invoices.status ILIKE ${`%${query}%`}
+  `;
+
+    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of invoices.');
+  }
 }

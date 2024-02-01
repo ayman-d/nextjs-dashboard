@@ -19,6 +19,8 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
     return `${pathname}?${params.toString()}`;
   };
 
+  console.log(totalPages);
+
   return (
     <>
       {/* NOTE: comment in this code when you get to this point in the course */}
