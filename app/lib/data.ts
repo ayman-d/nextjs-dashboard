@@ -4,35 +4,11 @@ import {
   CustomersTableType,
   InvoiceForm,
   InvoicesTable,
-  LatestInvoiceRaw,
-  User,
-  Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
 import { unstable_noStore as noStore } from 'next/cache';
 
-export async function fetchLatestInvoices() {
-  noStore();
-
-  try {
-    const data = await sql<LatestInvoiceRaw>`
-      SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
-      FROM invoices
-      JOIN customers ON invoices.customer_id = customers.id
-      ORDER BY invoices.date DESC
-      LIMIT 5`;
-
-    const latestInvoices = data.rows.map((invoice) => ({
-      ...invoice,
-      amount: formatCurrency(invoice.amount),
-    }));
-    return latestInvoices;
-  } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch the latest invoices.');
-  }
-}
-
+// TODO: Move fetchCardData to actions folder
 export async function fetchCardData() {
   noStore();
 
@@ -70,6 +46,7 @@ export async function fetchCardData() {
   }
 }
 
+// TODO: Move fetchFilteredInvoices to actions folder
 const ITEMS_PER_PAGE = 6;
 export async function fetchFilteredInvoices(
   query: string,
@@ -108,6 +85,7 @@ export async function fetchFilteredInvoices(
   }
 }
 
+// TODO: Move fetchInvoicesPages to actions folder
 export async function fetchInvoicesPages(query: string) {
   noStore();
 
@@ -131,6 +109,7 @@ export async function fetchInvoicesPages(query: string) {
   }
 }
 
+// TODO: Move fetchInvoiceById to actions folder
 export async function fetchInvoiceById(id: string) {
   noStore();
 
@@ -158,6 +137,7 @@ export async function fetchInvoiceById(id: string) {
   }
 }
 
+// TODO: Move fetchCustomers to actions folder
 export async function fetchCustomers() {
   noStore();
 
@@ -178,6 +158,7 @@ export async function fetchCustomers() {
   }
 }
 
+// TODO: Move fetchFilteredCustomers to actions folder
 export async function fetchFilteredCustomers(query: string) {
   noStore();
   try {
@@ -209,15 +190,5 @@ export async function fetchFilteredCustomers(query: string) {
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch customer table.');
-  }
-}
-
-export async function getUser(email: string) {
-  try {
-    const user = await sql`SELECT * FROM users WHERE email=${email}`;
-    return user.rows[0] as User;
-  } catch (error) {
-    console.error('Failed to fetch user:', error);
-    throw new Error('Failed to fetch user.');
   }
 }

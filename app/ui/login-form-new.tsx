@@ -1,11 +1,11 @@
 'use client';
 
-import { loginAction } from '@/app/lib/actions';
+import { login } from '@/app/lib/actions/authActions';
 import { useFormState } from 'react-dom';
 
 export default function LoginForm() {
   const initialState = { message: null, errors: {} };
-  const [state, dispatch] = useFormState(loginAction, initialState);
+  const [state, dispatch] = useFormState(login, initialState);
 
   return (
     <div className="min-w-11 max-w-2xl">
@@ -50,7 +50,6 @@ export default function LoginForm() {
             {state.message}
           </p>
         )}
-        {/* <button formAction="/auth/sign-up">Sign Up</button> */}
       </form>
     </div>
   );
