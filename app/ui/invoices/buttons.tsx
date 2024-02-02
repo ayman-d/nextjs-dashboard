@@ -1,7 +1,6 @@
 import { deleteInvoice } from '@/app/lib/actions/invoiceActions';
 import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-deleteInvoice;
 
 export function CreateInvoice() {
   return (

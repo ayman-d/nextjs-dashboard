@@ -2,7 +2,6 @@
 'use server';
 
 import { z } from 'zod';
-import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
@@ -13,7 +12,6 @@ import {
   InvoiceForm,
   InvoicesTable,
   LatestInvoice,
-  Revenue,
 } from '@/app/lib/definitions';
 import { formatCurrency } from '@/app/lib/utils';
 
@@ -84,25 +82,19 @@ export async function createInvoice(prevState: State, formData: FormData) {
   // create a new data at the time of submission
   const date = new Date().toISOString().split('T')[0];
 
-  try {
-    // attempt to create a new invoice using supabase
-    const { error } = await supabase.from('invoices').insert([
-      {
-        customer_id: customerId,
-        amount: amountInCents,
-        status,
-        date,
-      },
-    ]);
+  // create a new invoice using supabase
+  const { error } = await supabase.from('invoices').insert([
+    {
+      customer_id: customerId,
+      amount: amountInCents,
+      status,
+      date,
+    },
+  ]);
 
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    // otherwise update the error messsage
-    return {
-      message: 'Database Error: Failed to create invoice.',
-    };
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to create invoice');
   }
 
   // revalidate the path so the cache is refreshed after data is posted
@@ -151,25 +143,19 @@ export async function updateInvoice(
   // store the monetary amount in cents (avoid floats)
   const amountInCents = amount * 100;
 
-  try {
-    // attempt to update the invoice on supabase
-    const { error } = await supabase
-      .from('invoices')
-      .update({
-        customer_id: customerId,
-        amount: amountInCents,
-        status,
-      })
-      .eq('id', id);
+  // update the invoice on supabase
+  const { error } = await supabase
+    .from('invoices')
+    .update({
+      customer_id: customerId,
+      amount: amountInCents,
+      status,
+    })
+    .eq('id', id);
 
-    if (error) {
-      throw error;
-    }
-  } catch (error) {
-    // otherwise update the error messsage
-    return {
-      message: `Database Error: Failed to update invoice`,
-    };
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to update invoice');
   }
 
   // revalidate the path so the cache is refreshed after data is posted
@@ -179,18 +165,27 @@ export async function updateInvoice(
   redirect('/dashboard/invoices');
 }
 
+/**
+ * function that deletes an invoice based on the id
+ * @param id id of invoice to be deleted
+ * @returns void
+ */
 export async function deleteInvoice(id: string) {
-  // write sql command
-  try {
-    await sql`
-      DELETE FROM invoices WHERE id = ${id};
-    `;
-  } catch (error) {
-    return {
-      message: `Database Error: Failed to delete invoice ${id}`,
-    };
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  // delete the invoice based on the id
+  const { error } = await supabase.from('invoices').delete().eq('id', id);
+
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to delete invoice');
   }
 
+  // redirect the user to the invoices page to see the new data
   revalidatePath('/dashboard/invoices');
 }
 
@@ -201,38 +196,43 @@ export async function deleteInvoice(id: string) {
 export async function getLatestInvoices(): Promise<
   LatestInvoice[] | undefined
 > {
+  // object to be returned once the request is done
+  let latestInvoices: LatestInvoice[] = [];
+
   // initialize the cookie and supabase client objects
   const cookieStore = cookies();
   const supabase = createServerActionClient<Database>({
     cookies: () => cookieStore,
   });
 
+  // attempt to get the latest 5 invoices from the database
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('amount, customers (name, image_url, email), id')
+    .order('date', { ascending: false })
+    .limit(5);
+
+  // if the request fails, throw an error
+  if (error) {
+    throw Error("Failed to fetch the latest invoices' data");
+  }
+
+  // Convert amount from cents to dollars. use .map because the data is an array
   try {
-    // attempt to get the latest 5 invoices from the database
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('amount, customers (name, image_url, email), id')
-      .order('date', { ascending: false })
-      .limit(5);
-    if (error) {
-      console.log(error);
-
-      throw error;
-    }
-
-    const latestInvoices: LatestInvoice[] = data.map((invoice) => ({
+    latestInvoices = data.map((invoice) => ({
       id: invoice.id,
       name: invoice.customers!.name,
       image_url: invoice.customers!.image_url!,
       email: invoice.customers!.email,
       amount: formatCurrency(invoice.amount),
     }));
-
-    return latestInvoices;
   } catch (error) {
     // otherwise log the error
-    console.log(error);
+    throw Error("Failed to format the latest invoices' data");
   }
+
+  // return the latest invoices
+  return latestInvoices;
 }
 
 /**
@@ -252,20 +252,22 @@ export async function fetchInvoicesPages(
     cookies: () => cookieStore,
   });
 
+  // get the number of pages required for the provided query text
+  const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
+    query: query,
+  });
+
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to fetch the number of pages');
+  }
+
+  // calculate the number of pages from the total number of invoices returned
   try {
-    // attempt to get the number of pages required for the provided query text
-    const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
-      query: query,
-    });
-
-    if (error) {
-      throw error;
-    }
-
     return Math.ceil(data.length / ITEMS_PER_PAGE);
   } catch (error) {
     // otherwise throw error
-    console.log(error);
+    throw Error('Failed to calculate the number of pages');
   }
 }
 
@@ -292,24 +294,21 @@ export async function fetchFilteredInvoices(
   const offsetStart = (currentPage - 1) * ITEMS_PER_PAGE;
   const offsetEnd = offsetStart + ITEMS_PER_PAGE - 1;
 
-  try {
-    // attempt to get the invoices based on the query param
-    const { data, error } = await supabase
-      .rpc('fetch_filtered_invoices', {
-        query: query,
-      })
-      .order('date', { ascending: false })
-      .range(offsetStart, offsetEnd);
+  // get the invoices based on the query param
+  const { data, error } = await supabase
+    .rpc('fetch_filtered_invoices', {
+      query: query,
+    })
+    .order('date', { ascending: false })
+    .range(offsetStart, offsetEnd);
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    // otherwise log error
-    console.log(error);
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to fetch invoices');
   }
+
+  // return the invoices
+  return data;
 }
 
 /**
@@ -320,6 +319,9 @@ export async function fetchFilteredInvoices(
 export async function fetchInvoiceById(
   invoiceId: string,
 ): Promise<InvoiceForm | undefined> {
+  // object to be returned once the request is done
+  let invoices: InvoiceForm[] = [];
+
   // specify that this function will not cache data
   noStore();
 
@@ -329,28 +331,29 @@ export async function fetchInvoiceById(
     cookies: () => cookieStore,
   });
 
+  // get the invoice based on the id
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('id, customer_id, amount, status')
+    .eq('id', invoiceId)
+    .returns<InvoiceForm[]>();
+
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to fetch the invoice data');
+  }
+
+  // Convert amount from cents to dollars. use .map because the data is an array
   try {
-    // attempt to get the invoice based on the id
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('id, customer_id, amount, status')
-      .eq('id', invoiceId)
-      .returns<InvoiceForm[]>();
-
-    if (error) {
-      throw error;
-    }
-
-    // Convert amount from cents to dollars. use .map because the data is an array
-    const invoices: InvoiceForm[] = data.map((invoice) => ({
+    invoices = data.map((invoice) => ({
       ...invoice,
       amount: invoice.amount / 100,
     }));
-
-    // return the first item in the array (should only be one item)
-    return invoices[0];
   } catch (error) {
-    // otherwise log error
-    console.log(error);
+    // otherwise throw error
+    throw Error("Failed to format the invoice's data");
   }
+
+  // return the first item in the array (should only be one item)
+  return invoices[0];
 }

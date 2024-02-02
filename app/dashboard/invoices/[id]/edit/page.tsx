@@ -1,6 +1,6 @@
 import Form from '@/app/ui/invoices/edit-form';
 import Breadcrumbs from '@/app/ui/invoices/breadcrumbs';
-import { fetchCustomers } from '@/app/lib/data';
+import { fetchCustomers } from '@/app/lib/actions/customerActions';
 import { fetchInvoiceById } from '@/app/lib/actions/invoiceActions';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
