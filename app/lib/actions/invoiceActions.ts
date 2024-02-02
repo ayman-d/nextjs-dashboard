@@ -9,7 +9,12 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import type { Database } from '@/database.types';
-import { InvoicesTable, LatestInvoice, Revenue } from '@/app/lib/definitions';
+import {
+  InvoiceForm,
+  InvoicesTable,
+  LatestInvoice,
+  Revenue,
+} from '@/app/lib/definitions';
 import { formatCurrency } from '@/app/lib/utils';
 
 // invoice schema object used by zod to represent the invoice form
@@ -230,33 +235,122 @@ export async function getLatestInvoices(): Promise<
   }
 }
 
-// FIXME: I cannot get this to work with supabase.
-// Needs more investigation. It might be good to return  all invoices and filter them in the client onChange
-
 /**
  * function that returns the number of pages of invoices after filtering based on the query param
  * @param query search query text
  * @returns pages of invoice data after filtering based on the query param
  */
-export async function fetchInvoicesPages(query: string) {
+export async function fetchInvoicesPages(
+  query: string,
+): Promise<number | undefined> {
+  // specify that this function will not cache data
   noStore();
 
-  try {
-    const count = await sql`SELECT COUNT(*)
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    WHERE
-      customers.name ILIKE ${`%${query}%`} OR
-      customers.email ILIKE ${`%${query}%`} OR
-      invoices.amount::text ILIKE ${`%${query}%`} OR
-      invoices.date::text ILIKE ${`%${query}%`} OR
-      invoices.status ILIKE ${`%${query}%`}
-  `;
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+  try {
+    // attempt to get the number of pages required for the provided query text
+    const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
+      query: query,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return Math.ceil(data.length / ITEMS_PER_PAGE);
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of invoices.');
+    // otherwise throw error
+    console.log(error);
+  }
+}
+
+/**
+ * @brief function that returns invoices based on the query param
+ * @param query search query text
+ * @param currentPage number of page of the retrieved invoices
+ * @returns invoice data based on search params: InvoiceTable[] | undefined
+ */
+export async function fetchFilteredInvoices(
+  query: string,
+  currentPage: number,
+): Promise<InvoicesTable[] | undefined> {
+  // specify that this function will not cache data
+  noStore();
+
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  // define the page offset (0 indexed)
+  const offsetStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const offsetEnd = offsetStart + ITEMS_PER_PAGE - 1;
+
+  try {
+    // attempt to get the invoices based on the query param
+    const { data, error } = await supabase
+      .rpc('fetch_filtered_invoices', {
+        query: query,
+      })
+      .order('date', { ascending: false })
+      .range(offsetStart, offsetEnd);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    // otherwise log error
+    console.log(error);
+  }
+}
+
+/**
+ * function that returns a single invoice based on the id
+ * @param id id of invoice to be fetched
+ * @returns the invoice data based on the id: InvoiceForm | undefined
+ */
+export async function fetchInvoiceById(
+  invoiceId: string,
+): Promise<InvoiceForm | undefined> {
+  // specify that this function will not cache data
+  noStore();
+
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  try {
+    // attempt to get the invoice based on the id
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id, customer_id, amount, status')
+      .eq('id', invoiceId)
+      .returns<InvoiceForm[]>();
+
+    if (error) {
+      throw error;
+    }
+
+    // Convert amount from cents to dollars. use .map because the data is an array
+    const invoices: InvoiceForm[] = data.map((invoice) => ({
+      ...invoice,
+      amount: invoice.amount / 100,
+    }));
+
+    // return the first item in the array (should only be one item)
+    return invoices[0];
+  } catch (error) {
+    // otherwise log error
+    console.log(error);
   }
 }
