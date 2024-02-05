@@ -1,6 +1,6 @@
 import { sql } from '@vercel/postgres';
 import {
-  CustomerMinified,
+  // CustomerMinified,
   CustomersTableType,
   InvoiceForm,
   InvoicesTable,
@@ -39,13 +39,17 @@ export async function fetchCustomers() {
   return data;
 }
 
-// FIXME: complete this function (convert sql into supabase client call)
 /**
  * function that returns customers based on the query param
  * @param query search query string
  * @returns list of customers based on search params: CustomerTableType[] | undefined
  */
-export async function fetchFilteredCustomers(query: string) {
+export async function fetchFilteredCustomers(
+  query: string,
+): Promise<CustomersTableType | undefined> {
+  // object to be returned once the request is done
+  let customers: CustomersTableType[] = [];
+
   // specify that this function will not cache data
   noStore();
 
@@ -55,41 +59,28 @@ export async function fetchFilteredCustomers(query: string) {
     cookies: () => cookieStore,
   });
 
-  // fetch the list of customers from the database based on the query param
-  const { data, error } = await supabase
-    .from('customers')
-    .select('id, name')
-    .ilike('name', `%${query}%`)
-    .order('name', { ascending: true });
+  // get the filtered customers based on the query param
+  const { data, error } = await supabase.rpc('fetch_filtered_customers', {
+    query,
+  });
 
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to fetch filtered customers');
+  }
+
+  // format the total_pending and total_paid fields to currency
   try {
-    const data = await sql<CustomersTableType>`
-          SELECT
-            customers.id,
-            customers.name,
-            customers.email,
-            customers.image_url,
-            COUNT(invoices.id) AS total_invoices,
-            SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-            SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-          FROM customers
-          LEFT JOIN invoices ON customers.id = invoices.customer_id
-          WHERE
-            customers.name ILIKE ${`%${query}%`} OR
-          customers.email ILIKE ${`%${query}%`}
-          GROUP BY customers.id, customers.name, customers.email, customers.image_url
-          ORDER BY customers.name ASC
-        `;
-
-    const customers = data.rows.map((customer) => ({
+    customers = data.map((customer) => ({
       ...customer,
       total_pending: formatCurrency(customer.total_pending),
       total_paid: formatCurrency(customer.total_paid),
     }));
-
-    return customers;
-  } catch (err) {
-    console.error('Database Error:', err);
-    throw new Error('Failed to fetch customer table.');
+  } catch (error) {
+    // otherwise throw error
+    throw Error("Failed to fetch customers' data");
   }
+
+  // return the first item in the array (should only be one item)
+  return customers[0];
 }

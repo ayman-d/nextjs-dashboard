@@ -11,7 +11,7 @@ export default function LoginForm() {
     <div className="min-w-11 max-w-2xl">
       <form
         action={dispatch}
-        className="m-3 rounded-md border border-black border-blue-500 bg-gray-100 px-7 pb-10 pt-5"
+        className="m-3 rounded-md border border-blue-500 bg-gray-100 px-7 pb-10 pt-5"
       >
         <h3 className="mb-3 text-center text-lg text-blue-700">
           Please log in to continue

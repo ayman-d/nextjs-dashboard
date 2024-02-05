@@ -1,4 +1,3 @@
-// HACK: the error handling here isn't good. revisit
 'use server';
 
 import { z } from 'zod';
@@ -252,7 +251,7 @@ export async function fetchInvoicesPages(
     cookies: () => cookieStore,
   });
 
-  // get the number of pages required for the provided query text
+  // get the filtered invoices based on the query param
   const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
     query: query,
   });

@@ -1,4 +1,3 @@
-// HACK: improve error handling
 'use server';
 
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
@@ -17,19 +16,16 @@ export async function getRevenue(): Promise<Revenue[] | undefined> {
     cookies: () => cookieStore,
   });
 
-  try {
-    // fetch the revenue records from the database
-    const { data, error } = await supabase
-      .from('revenue')
-      .select('month, revenue');
-    if (error) {
-      console.log(error);
+  // get the revenue records from the database
+  const { data, error } = await supabase
+    .from('revenue')
+    .select('month, revenue');
 
-      throw error;
-    }
-    return data;
-  } catch (error) {
-    // otherwise log the error
-    console.log(error);
+  // if the request fails, throw an error
+  if (error) {
+    throw Error('Failed to fetch revenue data');
   }
+
+  // return the revenue data
+  return data;
 }

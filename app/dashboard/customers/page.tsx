@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   title: 'Customers',
 };
 
-export default function CustomerPage() {
+export default async function CustomerPage() {
   return <CustomerHeader />;
 }
