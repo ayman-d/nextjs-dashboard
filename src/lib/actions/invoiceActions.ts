@@ -8,6 +8,7 @@ import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import type { Database } from '@/database.types';
 import {
+  CardData,
   InvoiceForm,
   InvoicesTable,
   LatestInvoice,
@@ -355,4 +356,37 @@ export async function fetchInvoiceById(
 
   // return the first item in the array (should only be one item)
   return invoices[0];
+}
+
+export async function fetchCardData() {
+  // specify that this function will not cache data
+  noStore();
+
+  // initialize the cookie and supabase client objects
+  const cookieStore = cookies();
+  const supabase = createServerActionClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  const { data, error } = await supabase.rpc('get_card_data', {});
+
+  if (error) {
+    throw new Error('Failed to fetch card data.');
+  }
+
+  try {
+    // populate the card data object with the correct data format for each field
+    var cardData: CardData = {
+      numberOfInvoices: data[0].invoices_count,
+      numberOfCustomers: data[0].customers_count,
+      totalPaidInvoices: formatCurrency(data[0].total_invoices_paid),
+      totalPendingInvoices: formatCurrency(data[0].total_invoices_pending),
+    };
+  } catch (error) {
+    // throw error if this fails
+    throw Error('Failed to format card data');
+  }
+
+  // return the card data
+  return cardData;
 }
