@@ -2,7 +2,7 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import Image from 'next/image';
 import { lusitana } from '@/src/components/common/fonts';
-import { getLatestInvoices } from '@/src/lib/actions/invoiceActions';
+import { getLatestInvoices } from '@/src/lib/actions/invoice-actions';
 
 export default async function LatestInvoices() {
   const latestInvoices = await getLatestInvoices();

@@ -389,6 +389,8 @@ export async function fetchCardData(): Promise<CardData | undefined> {
     throw Error('Failed to format card data');
   }
 
+  console.log(cardData);
+
   // return the card data
   return cardData;
 }

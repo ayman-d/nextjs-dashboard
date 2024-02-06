@@ -5,7 +5,7 @@ import { AtSymbolIcon, KeyIcon } from '@heroicons/react/24/outline';
 import { ArrowRightIcon } from '@heroicons/react/20/solid';
 import { Button } from '../common/button';
 import { useFormState, useFormStatus } from 'react-dom';
-import { login } from '@/src/lib/actions/authActions';
+import { login } from '@/src/lib/actions/auth-actions';
 
 export default function LoginForm() {
   const initialState = { message: null, errors: {} };

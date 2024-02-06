@@ -6,7 +6,7 @@ import { lusitana } from '@/src/components/common/fonts';
 import { InvoicesTableSkeleton } from '@/src/components/skeletons/skeletons';
 import { Suspense } from 'react';
 import { Metadata } from 'next';
-import { fetchInvoicesPages } from '@/src/lib/actions/invoiceActions';
+import { fetchInvoicesPages } from '@/src/lib/actions/invoice-actions';
 
 export const metadata: Metadata = {
   title: 'Invoices',

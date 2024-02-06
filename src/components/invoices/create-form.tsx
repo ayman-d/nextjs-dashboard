@@ -9,7 +9,7 @@ import {
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Button } from '@/src/components/common/button';
-import { createInvoice } from '@/src/lib/actions/invoiceActions';
+import { createInvoice } from '@/src/lib/actions/invoice-actions';
 import { useFormState } from 'react-dom';
 
 export default function Form({ customers }: { customers: CustomerField[] }) {

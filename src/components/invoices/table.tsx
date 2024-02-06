@@ -5,7 +5,7 @@ import {
 } from '@/src/components/invoices/buttons';
 import InvoiceStatus from '@/src/components/invoices/status';
 import { formatDateToLocal, formatCurrency } from '@/src/lib/utility/utils';
-import { fetchFilteredInvoices } from '@/src/lib/actions/invoiceActions';
+import { fetchFilteredInvoices } from '@/src/lib/actions/invoice-actions';
 
 export default async function InvoicesTable({
   query,

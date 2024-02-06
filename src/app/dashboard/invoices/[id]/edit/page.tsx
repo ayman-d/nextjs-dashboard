@@ -1,7 +1,7 @@
 import Form from '@/src/components/invoices/edit-form';
 import Breadcrumbs from '@/src/components/invoices/breadcrumbs';
-import { fetchCustomers } from '@/src/lib/actions/customerActions';
-import { fetchInvoiceById } from '@/src/lib/actions/invoiceActions';
+import { fetchCustomers } from '@/src/lib/actions/customer-actions';
+import { fetchInvoiceById } from '@/src/lib/actions/invoice-actions';
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 
