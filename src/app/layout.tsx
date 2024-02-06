@@ -1,5 +1,5 @@
 import '@/src/app/global.css';
-import { inter } from '@/src/components/fonts';
+import { inter } from '@/src/components/common/fonts';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

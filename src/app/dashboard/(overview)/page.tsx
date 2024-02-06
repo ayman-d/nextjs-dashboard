@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 import CardWrapper from '@/src/components/dashboard/cards';
-import { CardSkeleton } from '@/src/components/skeletons';
+import { CardSkeleton } from '@/src/components/skeletons/skeletons';
 import RevenueChart from '@/src/components/dashboard/revenue-chart';
 import LatestInvoices from '@/src/components/dashboard/latest-invoices';
-import { lusitana } from '@/src/components/fonts';
-import { RevenueChartSkeleton } from '@/src/components/skeletons';
-import { LatestInvoicesSkeleton } from '@/src/components/skeletons';
+import { lusitana } from '@/src/components/common/fonts';
+import { RevenueChartSkeleton } from '@/src/components/skeletons/skeletons';
+import { LatestInvoicesSkeleton } from '@/src/components/skeletons/skeletons';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

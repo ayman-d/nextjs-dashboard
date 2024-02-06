@@ -358,7 +358,7 @@ export async function fetchInvoiceById(
   return invoices[0];
 }
 
-export async function fetchCardData() {
+export async function fetchCardData(): Promise<CardData | undefined> {
   // specify that this function will not cache data
   noStore();
 
@@ -368,8 +368,10 @@ export async function fetchCardData() {
     cookies: () => cookieStore,
   });
 
+  // get card data from the database
   const { data, error } = await supabase.rpc('get_card_data', {});
 
+  // if the request fails, throw an error
   if (error) {
     throw new Error('Failed to fetch card data.');
   }
