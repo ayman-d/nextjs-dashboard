@@ -1,4 +1,4 @@
-import LoginForm from '@/src/components/auth/login-form-new';
+import LoginForm from '@/src/components/auth/login-form';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
