@@ -6,10 +6,31 @@ import { ArrowRightIcon } from '@heroicons/react/20/solid';
 import { Button } from '../common/button';
 import { useFormState, useFormStatus } from 'react-dom';
 import { login } from '@/src/lib/actions/auth-actions';
+import { useEffect, useState } from 'react';
+import { LoginErrorState } from '@/src/lib/actions/auth-actions';
 
 export default function LoginForm() {
-  const initialState = { message: null, errors: {} };
-  const [state, dispatch] = useFormState(login, initialState);
+  // set a local state to track the error state of the useFormState hook
+  const [cachedErrorState, setCachedErrorState] = useState<LoginErrorState>({
+    errors: {},
+    message: null,
+  });
+
+  // use the useFormState hook to handle form state and errors
+  const [formErrorState, dispatch] = useFormState(login, cachedErrorState);
+
+  // update the local state when the formErrorState changes
+  useEffect(() => {
+    setCachedErrorState({
+      errors: formErrorState.errors,
+      message: formErrorState.message,
+    });
+  }, [formErrorState]);
+
+  // clear the error state when the user starts typing
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCachedErrorState({ errors: {}, message: null });
+  };
 
   return (
     <form
@@ -32,14 +53,14 @@ export default function LoginForm() {
               <input
                 className="peer block w-full rounded-md border border-gray-200 py-[9px] pl-10 text-sm outline-2 placeholder:text-gray-500"
                 id="email"
-                type="email"
                 name="email"
                 placeholder="Enter your email address"
+                onChange={handleInputChange}
               />
               <AtSymbolIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
             </div>
-            {state.errors?.email &&
-              state.errors.email.map((error: string) => (
+            {cachedErrorState.errors?.email &&
+              cachedErrorState.errors.email.map((error: string) => (
                 <p className="mt-1 text-xs text-red-500" key={error}>
                   {error}
                 </p>
@@ -59,11 +80,12 @@ export default function LoginForm() {
                 type="password"
                 name="password"
                 placeholder="Enter password"
+                onChange={handleInputChange}
               />
               <KeyIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" />
             </div>
-            {state.errors?.password &&
-              state.errors.password.map((error: string) => (
+            {cachedErrorState.errors?.password &&
+              cachedErrorState.errors.password.map((error: string) => (
                 <p className="mt-1 text-xs text-red-500" key={error}>
                   {error}
                 </p>
@@ -71,9 +93,12 @@ export default function LoginForm() {
           </div>
         </div>
         <LoginButton />
-        {state.message && (
-          <p className="fixed mt-3 text-xs text-red-500" key={state.message}>
-            {state.message}
+        {cachedErrorState.message && (
+          <p
+            className="fixed mt-3 text-xs text-red-500"
+            key={cachedErrorState.message}
+          >
+            {cachedErrorState.message}
           </p>
         )}
         <div
@@ -81,9 +106,7 @@ export default function LoginForm() {
           aria-live="polite"
           aria-atomic="true"
         ></div>
-        <div className="flex h-8 items-end space-x-1">
-          {/* Add form errors here */}
-        </div>
+        <div className="flex h-8 items-end space-x-1"></div>
       </div>
     </form>
   );

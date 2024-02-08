@@ -22,7 +22,7 @@ const IdentityFormSchema = z.object({
 });
 
 // state representing the error states and messages relevant to the user's identity
-export type IdentityState = {
+export type LoginErrorState = {
   errors?: {
     email?: string[];
     password?: string[];
@@ -36,7 +36,7 @@ export type IdentityState = {
  * @param formData the form data submitted by the form
  * @returns state of the request which is used by the useFormState function
  */
-export async function login(prevState: IdentityState, formData: FormData) {
+export async function login(prevState: LoginErrorState, formData: FormData) {
   // initialize the cookie and supabase client objects
   const cookieStore = cookies();
   const supabase = createServerActionClient<Database>({
