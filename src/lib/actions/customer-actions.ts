@@ -1,14 +1,9 @@
-import { sql } from '@vercel/postgres';
-import {
-  // CustomerMinified,
-  CustomersTableType,
-  InvoiceForm,
-  InvoicesTable,
-} from '@/src/lib/types/definitions';
+'use server';
+
+import { CustomersTableType } from '@/src/lib/types/definitions';
 import { formatCurrency } from '@/src/lib/utility/utils';
 import { unstable_noStore as noStore } from 'next/cache';
-import { cookies } from 'next/headers';
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/database.types';
 
 /**
@@ -20,10 +15,10 @@ export async function fetchCustomers() {
   noStore();
 
   // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // fetch the list of customers from the database
   const { data, error } = await supabase
@@ -54,10 +49,10 @@ export async function fetchFilteredCustomers(
   noStore();
 
   // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // get the filtered customers based on the query param
   const { data, error } = await supabase.rpc('fetch_filtered_customers', {

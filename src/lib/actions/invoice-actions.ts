@@ -4,8 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/database.types';
 import {
   CardData,
@@ -55,10 +54,10 @@ const ITEMS_PER_PAGE = 6;
  */
 export async function createInvoice(prevState: State, formData: FormData) {
   // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // validate the provided form data
   const validatedFields = CreateInvoiceSchema.safeParse({
@@ -116,11 +115,11 @@ export async function updateInvoice(
   prevState: State,
   formData: FormData,
 ) {
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // validate the provided form data
   const validatedFields = UpdateInvoiceSchema.safeParse({
@@ -171,11 +170,11 @@ export async function updateInvoice(
  * @returns void
  */
 export async function deleteInvoice(id: string) {
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // delete the invoice based on the id
   const { error } = await supabase.from('invoices').delete().eq('id', id);
@@ -199,11 +198,11 @@ export async function getLatestInvoices(): Promise<
   // object to be returned once the request is done
   let latestInvoices: LatestInvoice[] = [];
 
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // attempt to get the latest 5 invoices from the database
   const { data, error } = await supabase
@@ -246,11 +245,11 @@ export async function fetchInvoicesPages(
   // specify that this function will not cache data
   noStore();
 
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // get the filtered invoices based on the query param
   const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
@@ -284,11 +283,11 @@ export async function fetchFilteredInvoices(
   // specify that this function will not cache data
   noStore();
 
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // define the page offset (0 indexed)
   const offsetStart = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -325,11 +324,11 @@ export async function fetchInvoiceById(
   // specify that this function will not cache data
   noStore();
 
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // get the invoice based on the id
   const { data, error } = await supabase
@@ -358,15 +357,15 @@ export async function fetchInvoiceById(
   return invoices[0];
 }
 
-export async function fetchCardData(): Promise<CardData | undefined> {
+export async function fetchCardData(): Promise<CardData> {
   // specify that this function will not cache data
   noStore();
 
-  // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  // initialize the supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // get card data from the database
   const { data, error } = await supabase.rpc('get_card_data', {});

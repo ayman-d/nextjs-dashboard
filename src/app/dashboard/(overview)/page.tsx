@@ -7,12 +7,16 @@ import { lusitana } from '@/src/components/common/fonts';
 import { RevenueChartSkeleton } from '@/src/components/skeletons/skeletons';
 import { LatestInvoicesSkeleton } from '@/src/components/skeletons/skeletons';
 import { Metadata } from 'next';
+import { fetchCardData } from '@/src/lib/actions/invoice-actions';
+import { CardData } from '@/src/lib/types/definitions';
 
 export const metadata: Metadata = {
   title: 'Overview',
 };
 
 export default async function Page() {
+  const cardData: CardData = await fetchCardData();
+
   return (
     <main>
       <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
@@ -20,7 +24,7 @@ export default async function Page() {
       </h1>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Suspense fallback={<CardSkeleton />}>
-          <CardWrapper />
+          <CardWrapper cardData={cardData} />
         </Suspense>
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">

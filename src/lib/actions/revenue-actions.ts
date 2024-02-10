@@ -1,6 +1,6 @@
 'use server';
 
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from '@/database.types';
 import { Revenue } from '@/src/lib/types/definitions';
@@ -11,10 +11,10 @@ import { Revenue } from '@/src/lib/types/definitions';
  */
 export async function getRevenue(): Promise<Revenue[] | undefined> {
   // initialize the cookie and supabase client objects
-  const cookieStore = cookies();
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore,
-  });
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
 
   // get the revenue records from the database
   const { data, error } = await supabase
