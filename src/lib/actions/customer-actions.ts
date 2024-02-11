@@ -14,7 +14,7 @@ export async function fetchCustomers() {
   // specify that this function will not cache data
   noStore();
 
-  // initialize the cookie and supabase client objects
+  // initialize the supabase client
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -48,7 +48,7 @@ export async function fetchFilteredCustomers(
   // specify that this function will not cache data
   noStore();
 
-  // initialize the cookie and supabase client objects
+  // initialize the supabase client
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
