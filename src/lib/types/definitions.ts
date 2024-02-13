@@ -13,7 +13,7 @@ export type Customer = {
   id: string;
   name: string;
   email: string;
-  image_url: string;
+  image_url: string | null;
 };
 
 export type CustomerSimple = {

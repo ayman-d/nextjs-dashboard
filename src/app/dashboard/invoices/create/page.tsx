@@ -1,6 +1,6 @@
 import Form from '@/src/components/invoices/create-form';
 import Breadcrumbs from '@/src/components/invoices/breadcrumbs';
-import { fetchCustomers } from '@/src/lib/actions/customer-actions';
+import { fetchCustomerNames } from '@/src/lib/actions/customer-actions';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const customers = await fetchCustomers();
+  const customers = await fetchCustomerNames();
 
   return (
     <main>

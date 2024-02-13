@@ -253,7 +253,7 @@ export async function fetchInvoicesPages(query: string): Promise<number> {
 
   // if the request fails, throw an error
   if (error) {
-    throw Error('Failed to fetch the number of pages');
+    throw Error('Failed to fetch the number of invoice pages');
   }
 
   // calculate the number of pages from the total number of invoices returned
