@@ -1,6 +1,6 @@
 'use client';
 
-import { CustomerField } from '@/src/lib/types/definitions';
+import { CustomerField } from '@/src/lib/types/customer-types';
 import Link from 'next/link';
 import {
   CheckIcon,

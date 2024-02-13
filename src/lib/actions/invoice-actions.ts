@@ -15,7 +15,7 @@ import {
   InvoiceForm,
   InvoicesTable,
   LatestInvoice,
-} from '@/src/lib/types/definitions';
+} from '@/src/lib/types/invoice-types';
 import { formatCurrency } from '@/src/lib/utility/utils';
 
 // invoice schema object used by zod to represent the invoice form

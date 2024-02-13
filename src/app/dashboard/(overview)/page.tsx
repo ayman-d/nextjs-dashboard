@@ -8,7 +8,7 @@ import { RevenueChartSkeleton } from '@/src/components/skeletons/skeletons';
 import { LatestInvoicesSkeleton } from '@/src/components/skeletons/skeletons';
 import { Metadata } from 'next';
 import { fetchCardData } from '@/src/lib/actions/invoice-actions';
-import { CardData } from '@/src/lib/types/definitions';
+import { CardData } from '@/src/lib/types/invoice-types';
 
 export const metadata: Metadata = {
   title: 'Overview',

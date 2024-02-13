@@ -3,7 +3,7 @@
 import {
   CustomerSimple,
   CustomersTableType,
-} from '@/src/lib/types/definitions';
+} from '@/src/lib/types/customer-types';
 import { formatCurrency } from '@/src/lib/utility/utils';
 import { unstable_noStore as noStore } from 'next/cache';
 import { Database } from '@/database.types';

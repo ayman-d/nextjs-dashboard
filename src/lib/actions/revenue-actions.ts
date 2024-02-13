@@ -3,7 +3,7 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import type { Database } from '@/database.types';
-import { Revenue } from '@/src/lib/types/definitions';
+import { Revenue } from '@/src/lib/types/revenue-types';
 
 /**
  * @brief function to get revenue records from the database
