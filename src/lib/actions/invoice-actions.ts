@@ -4,8 +4,12 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/database.types';
+import {
+  createServerActionClient,
+  createServerComponentClient,
+} from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import {
   CardData,
   InvoiceForm,
@@ -30,7 +34,7 @@ const InvoiceFormSchema = z.object({
 });
 
 // state representing the error states and messages relevant to invoices
-export type State = {
+export type InvoiceActionErrorState = {
   errors?: {
     customerId?: string[];
     amount?: string[];
@@ -52,12 +56,14 @@ const ITEMS_PER_PAGE = 6;
  * @param formData the form data submitted by the form
  * @returns state of the request which is used by the useFormState function
  */
-export async function createInvoice(prevState: State, formData: FormData) {
+export async function createInvoice(
+  prevState: InvoiceActionErrorState,
+  formData: FormData,
+): Promise<InvoiceActionErrorState> {
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerActionClient<Database>({
+    cookies,
+  });
 
   // validate the provided form data
   const validatedFields = CreateInvoiceSchema.safeParse({
@@ -112,14 +118,13 @@ export async function createInvoice(prevState: State, formData: FormData) {
  */
 export async function updateInvoice(
   id: string,
-  prevState: State,
+  prevState: InvoiceActionErrorState,
   formData: FormData,
-) {
+): Promise<InvoiceActionErrorState> {
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerActionClient<Database>({
+    cookies,
+  });
 
   // validate the provided form data
   const validatedFields = UpdateInvoiceSchema.safeParse({
@@ -171,10 +176,9 @@ export async function updateInvoice(
  */
 export async function deleteInvoice(id: string) {
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerActionClient<Database>({
+    cookies,
+  });
 
   // delete the invoice based on the id
   const { error } = await supabase.from('invoices').delete().eq('id', id);
@@ -190,19 +194,13 @@ export async function deleteInvoice(id: string) {
 
 /**
  * @brief function that returns the latest 5 invoices from the database
- * @returns latest invoice data: Invoice[] | undefined
+ * @returns latest invoice data: Invoice[]
  */
-export async function getLatestInvoices(): Promise<
-  LatestInvoice[] | undefined
-> {
-  // object to be returned once the request is done
-  let latestInvoices: LatestInvoice[] = [];
-
+export async function getLatestInvoices(): Promise<LatestInvoice[]> {
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // attempt to get the latest 5 invoices from the database
   const { data, error } = await supabase
@@ -218,7 +216,7 @@ export async function getLatestInvoices(): Promise<
 
   // Convert amount from cents to dollars. use .map because the data is an array
   try {
-    latestInvoices = data.map((invoice) => ({
+    var latestInvoices = data.map((invoice) => ({
       id: invoice.id,
       name: invoice.customers!.name,
       image_url: invoice.customers!.image_url!,
@@ -239,17 +237,14 @@ export async function getLatestInvoices(): Promise<
  * @param query search query text
  * @returns pages of invoice data after filtering based on the query param
  */
-export async function fetchInvoicesPages(
-  query: string,
-): Promise<number | undefined> {
+export async function fetchInvoicesPages(query: string): Promise<number> {
   // specify that this function will not cache data
   noStore();
 
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // get the filtered invoices based on the query param
   const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
@@ -274,20 +269,19 @@ export async function fetchInvoicesPages(
  * @brief function that returns invoices based on the query param
  * @param query search query text
  * @param currentPage number of page of the retrieved invoices
- * @returns invoice data based on search params: InvoiceTable[] | undefined
+ * @returns invoice data based on search params: InvoiceTable[]
  */
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
-): Promise<InvoicesTable[] | undefined> {
+): Promise<InvoicesTable[]> {
   // specify that this function will not cache data
   noStore();
 
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // define the page offset (0 indexed)
   const offsetStart = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -313,11 +307,11 @@ export async function fetchFilteredInvoices(
 /**
  * function that returns a single invoice based on the id
  * @param id id of invoice to be fetched
- * @returns the invoice data based on the id: InvoiceForm | undefined
+ * @returns the invoice data based on the id: InvoiceForm
  */
 export async function fetchInvoiceById(
   invoiceId: string,
-): Promise<InvoiceForm | undefined> {
+): Promise<InvoiceForm> {
   // object to be returned once the request is done
   let invoices: InvoiceForm[] = [];
 
@@ -325,10 +319,9 @@ export async function fetchInvoiceById(
   noStore();
 
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // get the invoice based on the id
   const { data, error } = await supabase
@@ -362,10 +355,9 @@ export async function fetchCardData(): Promise<CardData> {
   noStore();
 
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // get card data from the database
   const { data, error } = await supabase.rpc('get_card_data', {});

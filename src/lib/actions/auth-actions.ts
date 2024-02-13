@@ -36,7 +36,10 @@ export type LoginErrorState = {
  * @param formData the form data submitted by the form
  * @returns state of the request which is used by the useFormState function
  */
-export async function login(prevState: LoginErrorState, formData: FormData) {
+export async function login(
+  prevState: LoginErrorState,
+  formData: FormData,
+): Promise<LoginErrorState> {
   // initialize the cookie and supabase client objects
   const cookieStore = cookies();
   const supabase = createServerActionClient<Database>({
@@ -79,7 +82,7 @@ export async function login(prevState: LoginErrorState, formData: FormData) {
 
 /**
  * @brief function to log the user out
- * @returns null
+ * @returns void
  */
 export async function logout() {
   // initialize the cookie and supabase client objects

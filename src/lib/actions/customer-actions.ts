@@ -1,24 +1,28 @@
 'use server';
 
-import { CustomersTableType } from '@/src/lib/types/definitions';
+import {
+  Customer,
+  CustomerSimple,
+  CustomersTableType,
+} from '@/src/lib/types/definitions';
 import { formatCurrency } from '@/src/lib/utility/utils';
 import { unstable_noStore as noStore } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/database.types';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 /**
  * function to get list of customers
- * @returns list of customers
+ * @returns list of customers: CustomerSimple[]
  */
-export async function fetchCustomers() {
+export async function fetchCustomers(): Promise<CustomerSimple[]> {
   // specify that this function will not cache data
   noStore();
 
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // fetch the list of customers from the database
   const { data, error } = await supabase
@@ -41,18 +45,14 @@ export async function fetchCustomers() {
  */
 export async function fetchFilteredCustomers(
   query: string,
-): Promise<CustomersTableType | undefined> {
-  // object to be returned once the request is done
-  let customers: CustomersTableType[] = [];
-
+): Promise<CustomersTableType> {
   // specify that this function will not cache data
   noStore();
 
   // initialize the supabase client
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = createServerComponentClient<Database>({
+    cookies,
+  });
 
   // get the filtered customers based on the query param
   const { data, error } = await supabase.rpc('fetch_filtered_customers', {
@@ -66,7 +66,7 @@ export async function fetchFilteredCustomers(
 
   // format the total_pending and total_paid fields to currency
   try {
-    customers = data.map((customer) => ({
+    var customers: CustomersTableType[] = data.map((customer) => ({
       ...customer,
       total_pending: formatCurrency(customer.total_pending),
       total_paid: formatCurrency(customer.total_paid),
