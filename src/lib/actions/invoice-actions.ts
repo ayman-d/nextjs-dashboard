@@ -1,9 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { unstable_noStore as noStore } from 'next/cache';
+import { unstable_noStore as noStore, revalidatePath } from 'next/cache';
 import type { Database } from '@/database.types';
 import {
   createServerActionClient,
@@ -17,6 +16,7 @@ import {
   LatestInvoice,
 } from '@/src/lib/types/invoice-types';
 import { formatCurrency } from '@/src/lib/utility/utils';
+import sqlBuilder from './db';
 
 // invoice schema object used by zod to represent the invoice form
 const InvoiceFormSchema = z.object({
@@ -60,11 +60,6 @@ export async function createInvoice(
   prevState: InvoiceActionErrorState,
   formData: FormData,
 ): Promise<InvoiceActionErrorState> {
-  // initialize the supabase client
-  const supabase = createServerActionClient<Database>({
-    cookies,
-  });
-
   // validate the provided form data
   const validatedFields = CreateInvoiceSchema.safeParse({
     customerId: formData.get('customerId'),
@@ -87,19 +82,28 @@ export async function createInvoice(
   // create a new data at the time of submission
   const date = new Date().toISOString().split('T')[0];
 
-  // create a new invoice using supabase
-  const { error } = await supabase.from('invoices').insert([
-    {
-      customer_id: customerId,
-      amount: amountInCents,
-      status,
-      date,
-    },
-  ]);
+  // create sql instance
+  const sql = sqlBuilder();
 
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to create invoice');
+  // create a new invoice in the DB
+  try {
+    await sql`
+      INSERT into public.invoices(
+        customer_id, 
+        amount, 
+        status, 
+        date
+      )
+      VALUES (
+        ${customerId}, 
+        ${amountInCents}, 
+        ${status}, 
+        ${date}
+      )
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to add new invoice to the DB.');
   }
 
   // revalidate the path so the cache is refreshed after data is posted
@@ -121,11 +125,6 @@ export async function updateInvoice(
   prevState: InvoiceActionErrorState,
   formData: FormData,
 ): Promise<InvoiceActionErrorState> {
-  // initialize the supabase client
-  const supabase = createServerActionClient<Database>({
-    cookies,
-  });
-
   // validate the provided form data
   const validatedFields = UpdateInvoiceSchema.safeParse({
     customerId: formData.get('customerId'),
@@ -147,19 +146,22 @@ export async function updateInvoice(
   // store the monetary amount in cents (avoid floats)
   const amountInCents = amount * 100;
 
-  // update the invoice on supabase
-  const { error } = await supabase
-    .from('invoices')
-    .update({
-      customer_id: customerId,
-      amount: amountInCents,
-      status,
-    })
-    .eq('id', id);
+  // create sql instance
+  const sql = sqlBuilder();
 
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to update invoice');
+  // update the invoice on the DB
+  try {
+    await sql`
+      UPDATE public.invoices
+      SET
+        customer_id = ${customerId},
+        amount = ${amountInCents},
+        status = ${status}
+      WHERE id = ${id}
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to update invoice on the DB.');
   }
 
   // revalidate the path so the cache is refreshed after data is posted

@@ -1,54 +1,38 @@
 'use server';
 
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import type { Database } from '@/database.types';
 import { Revenue } from '@/src/lib/types/revenue-types';
-import postgres from 'postgres';
-
-const sql = postgres({
-  host: 'aws-0-ca-central-1.pooler.supabase.com',
-  database: 'postgres',
-  port: 5432,
-  user: 'postgres.yhicazhgeuiszmdmcmoz',
-  password: '3or#S!#UKGK74s',
-});
+import { unstable_noStore as noStore } from 'next/cache';
+import sqlBuilder from '@/src/lib/actions/db';
 
 /**
  * @brief function to get revenue records from the database
  * @returns revenue data: Revenue[]
  */
 export async function getRevenue(): Promise<Revenue[]> {
-  // initialize the supabase client
-  const supabase = createServerComponentClient<Database>({
-    cookies,
-  });
+  // specify that this function will not cache data
+  noStore();
 
-  // get the revenue records from the database
-  const { data, error } = await supabase
-    .from('revenue')
-    .select('month, revenue');
+  // initialize item to hold the data returned from the DB
+  let revenues: Revenue[];
 
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to fetch revenue data');
+  // create sql instance
+  const sql = sqlBuilder();
+
+  // get revenue records from the DB
+  try {
+    revenues = await sql<Revenue[]>`
+      SELECT id, revenue FROM public.revenue
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to fetch revenues from DB.');
   }
 
-  const stuff = await sql`
-    SELECT id, amount FROM public.invoices limit 5;
-  `;
-
-  const stuff2 = await sql<Revenue[]>`
-  SELECT id, revenue FROM public.revenue limit 5;
-  `;
-
-  stuff2.map((item) => (item.revenue = Number(item.revenue)));
-
-  console.log(stuff);
-  console.log('brr');
-  console.log(stuff2);
-  console.log('zrr');
+  // convert revenue column (string) to numbers
+  revenues.forEach((revenue) => {
+    revenue.revenue = Number(revenue.revenue);
+  });
 
   // return the revenue data
-  return data;
+  return revenues;
 }
