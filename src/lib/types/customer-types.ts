@@ -20,6 +20,11 @@ export type CustomersTableType = {
   total_paid: string;
 };
 
+export type CustomersTableTypeRaw = CustomersTableType & {
+  total_pending: number;
+  total_paid: number;
+};
+
 export type FormattedCustomersTable = {
   id: string;
   name: string;

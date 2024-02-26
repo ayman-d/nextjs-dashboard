@@ -4,6 +4,8 @@ import CustomersTable from '@/src/components/customers/table';
 import { Suspense } from 'react';
 import { InvoicesTableSkeleton } from '@/src/components/skeletons/skeletons';
 import Pagination from '@/src/components/invoices/pagination';
+import Search from '@/src/components/common/search';
+import { lusitana } from '@/src/components/common/fonts';
 
 export const metadata: Metadata = {
   title: 'Customers',
@@ -21,6 +23,12 @@ export default async function CustomerPage({
 
   return (
     <div className="w-full">
+      <div className="flex w-full items-center justify-between">
+        <h1 className={`${lusitana.className} text-2xl`}>Customers</h1>
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
+        <Search placeholder="Search customers..." />
+      </div>
       <Suspense key={query + currentPage} fallback={<InvoicesTableSkeleton />}>
         <CustomersTable query={query} currentPage={currentPage} />
       </Suspense>

@@ -2,7 +2,7 @@
 
 import { Revenue } from '@/src/lib/types/revenue-types';
 import { unstable_noStore as noStore } from 'next/cache';
-import sqlBuilder from '@/src/lib/actions/db';
+import sql from '@/src/lib/actions/db';
 
 /**
  * @brief function to get revenue records from the database
@@ -14,9 +14,6 @@ export async function getRevenue(): Promise<Revenue[]> {
 
   // initialize item to hold the data returned from the DB
   let revenues: Revenue[];
-
-  // create sql instance
-  const sql = sqlBuilder();
 
   // get revenue records from the DB
   try {

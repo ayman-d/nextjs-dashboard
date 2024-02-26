@@ -3,20 +3,17 @@
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { unstable_noStore as noStore, revalidatePath } from 'next/cache';
-import type { Database } from '@/database.types';
-import {
-  createServerActionClient,
-  createServerComponentClient,
-} from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import {
   CardData,
+  Invoice,
   InvoiceForm,
   InvoicesTable,
   LatestInvoice,
+  LatestInvoiceRaw,
 } from '@/src/lib/types/invoice-types';
 import { formatCurrency } from '@/src/lib/utility/utils';
-import sqlBuilder from './db';
+import sql from './db';
+import postgres from 'postgres';
 
 // invoice schema object used by zod to represent the invoice form
 const InvoiceFormSchema = z.object({
@@ -82,9 +79,6 @@ export async function createInvoice(
   // create a new data at the time of submission
   const date = new Date().toISOString().split('T')[0];
 
-  // create sql instance
-  const sql = sqlBuilder();
-
   // create a new invoice in the DB
   try {
     await sql`
@@ -146,9 +140,6 @@ export async function updateInvoice(
   // store the monetary amount in cents (avoid floats)
   const amountInCents = amount * 100;
 
-  // create sql instance
-  const sql = sqlBuilder();
-
   // update the invoice on the DB
   try {
     await sql`
@@ -177,17 +168,14 @@ export async function updateInvoice(
  * @returns void
  */
 export async function deleteInvoice(id: string) {
-  // initialize the supabase client
-  const supabase = createServerActionClient<Database>({
-    cookies,
-  });
-
-  // delete the invoice based on the id
-  const { error } = await supabase.from('invoices').delete().eq('id', id);
-
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to delete invoice');
+  try {
+    await sql`
+      DELETE public.invoices
+      WHERE id = ${id}
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to delete invoice from DB.');
   }
 
   // redirect the user to the invoices page to see the new data
@@ -199,36 +187,32 @@ export async function deleteInvoice(id: string) {
  * @returns latest invoice data: Invoice[]
  */
 export async function getLatestInvoices(): Promise<LatestInvoice[]> {
-  // initialize the supabase client
-  const supabase = createServerComponentClient<Database>({
-    cookies,
-  });
+  // specify that this function will not cache data
+  noStore();
 
-  // attempt to get the latest 5 invoices from the database
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('amount, customers (name, image_url, email), id')
-    .order('date', { ascending: false })
-    .limit(5);
+  let data: LatestInvoiceRaw[] = [];
 
-  // if the request fails, throw an error
-  if (error) {
-    throw Error("Failed to fetch the latest invoices' data");
+  try {
+    data = await sql`
+    SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
+    FROM invoices
+    JOIN customers ON invoices.customer_id = customers.id
+    ORDER BY invoices.date DESC
+    LIMIT 5;
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to fetch latest invoices from DB.');
   }
 
   // Convert amount from cents to dollars. use .map because the data is an array
-  try {
-    var latestInvoices = data.map((invoice) => ({
-      id: invoice.id,
-      name: invoice.customers!.name,
-      image_url: invoice.customers!.image_url!,
-      email: invoice.customers!.email,
-      amount: formatCurrency(invoice.amount),
-    }));
-  } catch (error) {
-    // otherwise log the error
-    throw Error("Failed to format the latest invoices' data");
-  }
+  const latestInvoices: LatestInvoice[] = data.map((invoice) => ({
+    id: invoice.id,
+    name: invoice.name,
+    image_url: invoice.image_url,
+    email: invoice.email,
+    amount: formatCurrency(invoice.amount),
+  }));
 
   // return the latest invoices
   return latestInvoices;
@@ -243,27 +227,30 @@ export async function fetchInvoicesPages(query: string): Promise<number> {
   // specify that this function will not cache data
   noStore();
 
-  // initialize the supabase client
-  const supabase = createServerComponentClient<Database>({
-    cookies,
-  });
+  let count: postgres.RowList<postgres.Row[]>;
 
-  // get the filtered invoices based on the query param
-  const { data, error } = await supabase.rpc('fetch_filtered_invoices', {
-    query: query,
-  });
-
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to fetch the number of invoice pages');
+  try {
+    count = await sql`
+    SELECT COUNT(*)
+    FROM public.invoices JOIN public.customers ON invoices.customer_id = customers.id
+    WHERE
+      customers.name ilike ${`%${query}%`} or
+      customers.email ilike ${`%${query}%`} or
+      invoices.amount::text ilike ${`%${query}%`} or
+      invoices.date::text ilike ${`%${query}%`} or
+      invoices.status ilike ${`%${query}%`};
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to get number of filtered invoices pages from DB.');
   }
 
-  // calculate the number of pages from the total number of invoices returned
   try {
-    return Math.ceil(data.length / ITEMS_PER_PAGE);
+    // calculate the number of pages from the total number of invoices returned
+    return Math.ceil(count[0].count / ITEMS_PER_PAGE);
   } catch (error) {
-    // otherwise throw error
-    throw Error('Failed to calculate the number of pages');
+    console.log(error);
+    throw new Error('Failed to count number of invoice pages.');
   }
 }
 
@@ -280,26 +267,35 @@ export async function fetchFilteredInvoices(
   // specify that this function will not cache data
   noStore();
 
-  // initialize the supabase client
-  const supabase = createServerComponentClient<Database>({
-    cookies,
-  });
-
   // define the page offset (0 indexed)
-  const offsetStart = (currentPage - 1) * ITEMS_PER_PAGE;
-  const offsetEnd = offsetStart + ITEMS_PER_PAGE - 1;
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  // get the invoices based on the query param
-  const { data, error } = await supabase
-    .rpc('fetch_filtered_invoices', {
-      query: query,
-    })
-    .order('date', { ascending: false })
-    .range(offsetStart, offsetEnd);
+  let data: InvoicesTable[] = [];
 
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to fetch invoices');
+  try {
+    data = await sql`
+      SELECT
+        invoices.id,
+        invoices.amount,
+        invoices.date,
+        invoices.status,
+        customers.name,
+        customers.email,
+        customers.image_url
+      FROM public.invoices
+      JOIN public.customers ON public.invoices.customer_id = customers.id
+      WHERE
+        customers.name ILIKE ${`%${query}%`} OR
+        customers.email ILIKE ${`%${query}%`} OR
+        invoices.amount::text ILIKE ${`%${query}%`} OR
+        invoices.date::text ILIKE ${`%${query}%`} OR
+        invoices.status ILIKE ${`%${query}%`}
+      ORDER BY public.invoices.date DESC
+      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to get filtered invoices from DB.');
   }
 
   // return the invoices
@@ -314,28 +310,24 @@ export async function fetchFilteredInvoices(
 export async function fetchInvoiceById(
   invoiceId: string,
 ): Promise<InvoiceForm> {
-  // object to be returned once the request is done
-  let invoices: InvoiceForm[] = [];
-
   // specify that this function will not cache data
   noStore();
 
-  // initialize the supabase client
-  const supabase = createServerComponentClient<Database>({
-    cookies,
-  });
+  let data: Invoice[] = [];
 
-  // get the invoice based on the id
-  const { data, error } = await supabase
-    .from('invoices')
-    .select('id, customer_id, amount, status')
-    .eq('id', invoiceId)
-    .returns<InvoiceForm[]>();
-
-  // if the request fails, throw an error
-  if (error) {
-    throw Error('Failed to fetch the invoice data');
+  try {
+    data = await sql`
+      SELECT id, customer_id, amount, status
+      FROM public.invoices
+      WHERE id = ${invoiceId}
+    `;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to get invoice by id from DB.');
   }
+
+  // object to be returned once the request is done
+  let invoices: InvoiceForm[] = [];
 
   // Convert amount from cents to dollars. use .map because the data is an array
   try {
@@ -356,32 +348,32 @@ export async function fetchCardData(): Promise<CardData> {
   // specify that this function will not cache data
   noStore();
 
-  // initialize the supabase client
-  const supabase = createServerComponentClient<Database>({
-    cookies,
-  });
-
-  // get card data from the database
-  const { data, error } = await supabase.rpc('get_card_data', {});
-
-  // if the request fails, throw an error
-  if (error) {
-    throw new Error('Failed to fetch card data.');
-  }
+  let invoiceCountPromise = sql`SELECT * FROM public.invoices`;
+  let customerCountPromise = sql`SELECT * FROM public.customers`;
+  let invoiceStatusPromise = sql`
+    SELECT 
+      SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) as "paid", 
+      SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) as "pending"
+      FROM public.invoices;
+    `;
 
   try {
-    // populate the card data object with the correct data format for each field
-    var cardData: CardData = {
-      numberOfInvoices: data[0].invoices_count,
-      numberOfCustomers: data[0].customers_count,
-      totalPaidInvoices: formatCurrency(data[0].total_invoices_paid),
-      totalPendingInvoices: formatCurrency(data[0].total_invoices_pending),
-    };
-  } catch (error) {
-    // throw error if this fails
-    throw Error('Failed to format card data');
-  }
+    const data = await Promise.all([
+      invoiceCountPromise,
+      customerCountPromise,
+      invoiceStatusPromise,
+    ]);
 
-  // return the card data
-  return cardData;
+    const cardData: CardData = {
+      numberOfInvoices: data[0].count,
+      numberOfCustomers: data[1].count,
+      totalPaidInvoices: formatCurrency(data[2][0].paid),
+      totalPendingInvoices: formatCurrency(data[2][0].pending),
+    };
+
+    return cardData;
+  } catch (error) {
+    console.log(error);
+    throw new Error('Failed to get raw card data from DB.');
+  }
 }
